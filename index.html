@@ -1212,31 +1212,40 @@
 
     // ── Mistral API call ───────────────────────────────────
     async function callMistral(prompt) {
-      if (!MISTRAL_API_KEY) {
-        throw new Error('Service unavailable (Missing credentials).');
+      let res;
+
+      // HYBRID APPROACH: 
+      // If we're running locally and successfully loaded the .env file, we call Mistral directly.
+      // If we're deployed on Netlify, MISTRAL_API_KEY will be empty in the browser, so we call our secure Netlify serverless function instead.
+      if (MISTRAL_API_KEY) {
+        res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + MISTRAL_API_KEY
+          },
+          body: JSON.stringify({
+            model: 'mistral-large-latest',
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        });
+      } else {
+        res = await fetch('/.netlify/functions/mistral', {
+          method: 'POST',
+          body: JSON.stringify({ prompt })
+        });
       }
-      const res = await fetch(MISTRAL_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + MISTRAL_API_KEY
-        },
-        body: JSON.stringify({
-          model: MISTRAL_MODEL,
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      });
+
       const data = await res.json();
 
       if (!res.ok) {
-        const errorMsg = data.message || (data.error && data.error.message) || data.detail || JSON.stringify(data);
-        throw new Error(res.status + ' ' + errorMsg);
+        throw new Error('Service unavailable (Server error).');
       }
 
       if (data.error) throw new Error('AI Service error');
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response structure: ' + JSON.stringify(data));
+        throw new Error('Invalid response structure');
       }
       return data.choices[0].message.content;
     }
