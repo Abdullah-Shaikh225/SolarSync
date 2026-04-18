@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SolarSync AI — Energy Dashboard</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0c0f">
+  <link rel="manifest"
+    href='data:application/manifest+json,{"name":"SolarSync AI","short_name":"SolarSync","display":"standalone","background_color":"#0a0c0f","theme_color":"#f5a623","start_url":".","icons":[{"src":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iI2Y1YTYyMyIvPjwvc3ZnPg==","type":"image/svg+xml","sizes":"512x512"}]}'>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --sun: #f5a623;
+      --sun-dim: #7a4e0d;
+      --green: #2ecc71;
+      --green-dim: #1a7a43;
+      --bg: #0a0c0f;
+      --bg2: #11141a;
+      --bg3: #181c24;
+      --border: rgba(255, 255, 255, 0.07);
+      --text: #e8eaf0;
+      --muted: #5a6070;
+      --battery: #4fc3f7;
+      --battery-dim: #1a5a7a;
+      --ai: #a78bfa;
+      --ai-dim: #3b2f6e;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(245, 166, 35, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245, 166, 35, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .everything {
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 12, 15, 0.9);
+    }
+
+    .logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--sun);
+    }
+
+    .logo .ai-badge {
+      font-size: 0.55rem;
+      font-family: 'Space Mono', monospace;
+      background: var(--ai-dim);
+      color: var(--ai);
+      border: 1px solid var(--ai);
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    .live-dot.off {
+      background: #e74c3c;
+      animation: none;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4)
+      }
+
+      50% {
+        opacity: .7;
+        box-shadow: 0 0 0 5px rgba(46, 204, 113, 0)
+      }
+    }
+
+    .connect-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.8rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .connect-bar label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    select,
+    button {
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    select:hover,
+    button:hover {
+      border-color: var(--sun);
+    }
+
+    button.primary {
+      background: var(--sun);
+      color: #000;
+      font-weight: 700;
+      border-color: var(--sun);
+    }
+
+    button.primary:hover {
+      background: #d4891a;
+    }
+
+    button.danger-btn {
+      border-color: #e74c3c;
+      color: #e74c3c;
+    }
+
+    button.danger-btn:hover {
+      background: rgba(231, 76, 60, 0.1);
+    }
+
+    #status-text {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .main {
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .source-hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .source-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem;
+      background: var(--bg2);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .source-card.active-solar {
+      border-color: var(--sun);
+      background: rgba(245, 166, 35, 0.05);
+    }
+
+    .source-card.active-battery {
+      border-color: var(--battery);
+      background: rgba(79, 195, 247, 0.05);
+    }
+
+    .source-card .glow {
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      filter: blur(55px);
+      opacity: 0;
+      transition: opacity 0.4s;
+      top: -40px;
+      right: -40px;
+      pointer-events: none;
+    }
+
+    .source-card.active-solar .glow {
+      background: var(--sun);
+      opacity: 0.13;
+    }
+
+    .source-card.active-battery .glow {
+      background: var(--battery);
+      opacity: 0.13;
+    }
+
+    .source-label {
+      font-size: 0.65rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .source-name {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--muted);
+      transition: color 0.4s;
+    }
+
+    .source-card.active-solar .source-name {
+      color: var(--sun);
+    }
+
+    .source-card.active-battery .source-name {
+      color: var(--battery);
+    }
+
+    .source-icon {
+      font-size: 2rem;
+      margin-bottom: 4px;
+    }
+
+    .active-tag {
+      display: inline-block;
+      font-size: 0.6rem;
+      font-family: 'Space Mono', monospace;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-top: 6px;
+      background: rgba(245, 166, 35, 0.15);
+      color: var(--sun);
+      border: 1px solid rgba(245, 166, 35, 0.3);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    .source-card.active-solar .active-tag.solar-tag {
+      opacity: 1;
+    }
+
+    .source-card.active-battery .active-tag.battery-tag {
+      opacity: 1;
+      background: rgba(79, 195, 247, 0.15);
+      color: var(--battery);
+      border-color: rgba(79, 195, 247, 0.3);
+    }
+
+    .gauge-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.3rem;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .gauge-wrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+    }
+
+    .gauge-wrap svg {
+      width: 130px;
+      height: 130px;
+    }
+
+    .gauge-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-val {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: 'Space Mono', monospace;
+      color: var(--sun);
+      line-height: 1;
+    }
+
+    .gauge-unit {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .voltage-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .vstat {
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+    }
+
+    .vstat-label {
+      font-size: 0.6rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .vstat-val {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .chart-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.3rem;
+    }
+
+    .card-title {
+      font-size: 0.65rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+    }
+
+    canvas {
+      width: 100% !important;
+    }
+
+    .anomaly-bar {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 1rem 1.3rem;
+      display: none;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .anomaly-bar.show {
+      display: flex;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .anomaly-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .anomaly-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--danger);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 4px;
+    }
+
+    .anomaly-msg {
+      font-size: 0.75rem;
+      color: #fca5a5;
+      line-height: 1.6;
+    }
+
+    .ai-panel {
+      background: var(--bg2);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .ai-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.3rem;
+      border-bottom: 1px solid rgba(167, 139, 250, 0.15);
+      background: rgba(167, 139, 250, 0.04);
+    }
+
+    .ai-panel-title {
+      font-size: 0.75rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--ai);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ai);
+      animation: pulse 2s infinite;
+    }
+
+    button.ai-btn {
+      background: rgba(167, 139, 250, 0.1);
+      color: var(--ai);
+      border-color: rgba(167, 139, 250, 0.3);
+      font-size: 0.65rem;
+    }
+
+    button.ai-btn:hover {
+      background: rgba(167, 139, 250, 0.2);
+      border-color: var(--ai);
+    }
+
+    .insights-list {
+      padding: 1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      min-height: 80px;
+    }
+
+    .insight-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg3);
+      animation: fadeIn 0.4s ease;
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .insight-item.loading {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .insight-tag {
+      font-size: 0.55rem;
+      font-family: 'Space Mono', monospace;
+      padding: 2px 8px;
+      border-radius: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .tag-info {
+      background: rgba(79, 195, 247, 0.15);
+      color: var(--battery);
+      border: 1px solid rgba(79, 195, 247, 0.3);
+    }
+
+    .tag-warn {
+      background: rgba(245, 166, 35, 0.15);
+      color: var(--sun);
+      border: 1px solid rgba(245, 166, 35, 0.3);
+    }
+
+    .tag-good {
+      background: rgba(46, 204, 113, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+
+    .tag-pred {
+      background: rgba(167, 139, 250, 0.15);
+      color: var(--ai);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+    }
+
+    .ai-chat {
+      border-top: 1px solid rgba(167, 139, 250, 0.15);
+    }
+
+    .chat-messages {
+      padding: 1rem 1.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--ai-dim);
+      border-radius: 4px;
+    }
+
+    .chat-msg {
+      display: flex;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .chat-msg.user {
+      flex-direction: row-reverse;
+    }
+
+    .chat-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .chat-avatar.ai-av {
+      background: var(--ai-dim);
+      color: var(--ai);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+    }
+
+    .chat-avatar.user-av {
+      background: rgba(245, 166, 35, 0.15);
+      color: var(--sun);
+      border: 1px solid rgba(245, 166, 35, 0.3);
+    }
+
+    .chat-bubble {
+      max-width: 80%;
+      padding: 0.8rem 1.1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+
+    .chat-msg.ai .chat-bubble {
+      background: var(--bg3);
+      color: var(--text);
+      border-color: rgba(167, 139, 250, 0.2);
+    }
+
+    .chat-msg.user .chat-bubble {
+      background: rgba(245, 166, 35, 0.1);
+      color: var(--text);
+      border-color: rgba(245, 166, 35, 0.25);
+    }
+
+    .chat-bubble.typing {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 0.8rem 1.3rem;
+      border-top: 1px solid rgba(167, 139, 250, 0.1);
+    }
+
+    #chat-input {
+      flex: 1;
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #chat-input:focus {
+      border-color: var(--ai);
+    }
+
+    #chat-input::placeholder {
+      color: var(--muted);
+    }
+
+    button.send-btn {
+      background: var(--ai);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    button.send-btn:hover {
+      background: #8b5cf6;
+    }
+
+    button.send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .savings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .savings-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .savings-card::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--sun), transparent);
+    }
+
+    .savings-period {
+      font-size: 0.6rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .savings-kwh {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--sun);
+      font-family: 'Space Mono', monospace;
+      line-height: 1;
+    }
+
+    .savings-kwh span {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .savings-rupee {
+      font-size: 0.8rem;
+      color: var(--green);
+      font-family: 'Space Mono', monospace;
+      margin-top: 4px;
+    }
+
+    .savings-hours {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-top: 6px;
+    }
+
+    .pred-card {
+      background: var(--bg2);
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 14px;
+      padding: 1.3rem;
+    }
+
+    .pred-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      margin-top: 0.8rem;
+    }
+
+    .pred-item {
+      background: var(--bg3);
+      border-radius: 10px;
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .pred-label {
+      font-size: 0.6rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .pred-val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ai);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .pred-sub {
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .log-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.3rem;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .log-list::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .log-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.68rem;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .log-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .log-dot.solar {
+      background: var(--sun);
+    }
+
+    .log-dot.battery {
+      background: var(--battery);
+    }
+
+    .log-time {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: var(--text);
+      flex: 1;
+    }
+
+    .log-volt {
+      color: var(--muted);
+    }
+
+    .no-log {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: 'Space Mono', monospace;
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .serial-card {
+      background: var(--bg);
+      border: 1px solid rgba(245, 166, 35, 0.15);
+      border-radius: 14px;
+      padding: 1.3rem;
+    }
+
+    #serial-raw {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--sun);
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+
+    #serial-raw::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    #serial-raw::-webkit-scrollbar-thumb {
+      background: var(--sun-dim);
+      border-radius: 4px;
+    }
+
+    .section-label {
+      font-size: 0.65rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 0 0.2rem;
+    }
+
+    .quick-questions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 0 1.3rem 0.8rem;
+    }
+
+    .qq {
+      font-size: 0.65rem;
+      font-family: 'Space Mono', monospace;
+      padding: 5px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      background: rgba(167, 139, 250, 0.05);
+      color: var(--ai);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .qq:hover {
+      background: rgba(167, 139, 250, 0.15);
+    }
+
+    @media(max-width:700px) {
+
+      .source-hero,
+      .charts-row,
+      .savings-grid,
+      .pred-grid,
+      .voltage-stats {
+        grid-template-columns: 1fr;
+      }
+
+      .gauge-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="everything">
+
+    <header>
+      <div class="logo">Solar<span>Sync</span> <span class="ai-badge">MISTRAL AI</span></div>
+      <div class="live-badge">
+        <div class="live-dot off" id="live-dot"></div>
+        <span id="live-label">DISCONNECTED</span>
+      </div>
+    </header>
+
+    <div class="connect-bar">
+      <label>PORT</label>
+      <select id="baud-select">
+        <option value="9600" selected>9600 baud</option>
+        <option value="115200">115200 baud</option>
+      </select>
+      <button class="primary" id="connect-btn" onclick="connectSerial()">Connect Arduino</button>
+      <button class="danger-btn" id="disconnect-btn" onclick="disconnectSerial()"
+        style="display:none">Disconnect</button>
+      <button onclick="clearData()">Clear Data</button>
+      <button class="ai-btn" onclick="runAIAnalysis()">AI Analyze Now</button>
+      <span id="status-text">Select port and connect</span>
+    </div>
+
+    <div class="main">
+
+      <div class="anomaly-bar" id="anomaly-bar">
+        <div class="anomaly-icon">⚠️</div>
+        <div>
+          <div class="anomaly-title">ANOMALY DETECTED</div>
+          <div class="anomaly-msg" id="anomaly-msg">—</div>
+        </div>
+      </div>
+
+      <div class="source-hero">
+        <div class="source-card" id="solar-card">
+          <div class="glow"></div>
+          <div class="source-icon">☀️</div>
+          <div class="source-label">Solar Panel</div>
+          <div class="source-name">SOLAR</div>
+          <div class="active-tag solar-tag">● ACTIVE SOURCE</div>
+        </div>
+        <div class="source-card active-battery" id="battery-card">
+          <div class="glow"></div>
+          <div class="source-icon">🔋</div>
+          <div class="source-label">Battery</div>
+          <div class="source-name">BATTERY</div>
+          <div class="active-tag battery-tag">● ACTIVE SOURCE</div>
+        </div>
+      </div>
+
+      <div class="gauge-section">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 130 130">
+            <circle cx="65" cy="65" r="54" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="9" />
+            <circle cx="65" cy="65" r="54" fill="none" stroke="var(--sun)" stroke-width="9" stroke-dasharray="339"
+              stroke-dashoffset="339" stroke-linecap="round" transform="rotate(-90 65 65)" id="gauge-arc"
+              style="transition: stroke-dashoffset 0.8s ease;" />
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-val" id="gauge-val">0.00</div>
+            <div class="gauge-unit">VOLTS</div>
+          </div>
+        </div>
+        <div>
+          <div class="card-title">Voltage Monitor</div>
+          <div class="voltage-stats">
+            <div class="vstat">
+              <div class="vstat-label">Current</div>
+              <div class="vstat-val" id="v-current" style="color:var(--sun)">—</div>
+            </div>
+            <div class="vstat">
+              <div class="vstat-label">Max Today</div>
+              <div class="vstat-val" id="v-max" style="color:var(--green)">—</div>
+            </div>
+            <div class="vstat">
+              <div class="vstat-label">Min Today</div>
+              <div class="vstat-val" id="v-min" style="color:var(--battery)">—</div>
+            </div>
+            <div class="vstat">
+              <div class="vstat-label">Threshold</div>
+              <div class="vstat-val" style="color:var(--muted)">9.0 V</div>
+            </div>
+            <div class="vstat">
+              <div class="vstat-label">Avg Today</div>
+              <div class="vstat-val" id="v-avg">—</div>
+            </div>
+            <div class="vstat">
+              <div class="vstat-label">Readings</div>
+              <div class="vstat-val" id="v-count">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="card-title">Live Voltage — Last 60 Readings</div>
+          <canvas id="voltage-chart" height="140"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="card-title">Source Distribution Today</div>
+          <canvas id="pie-chart" height="140"></canvas>
+        </div>
+      </div>
+
+      <div class="ai-panel">
+        <div class="ai-panel-header">
+          <div class="ai-panel-title">
+            <div class="ai-dot"></div> Mistral AI Intelligence Engine
+          </div>
+          <button class="ai-btn" onclick="runAIAnalysis()">Refresh Insights</button>
+        </div>
+        <div class="insights-list" id="insights-list">
+          <div class="insight-item loading">Connect Arduino to start receiving AI-powered insights...</div>
+        </div>
+        <div class="ai-chat">
+          <div class="quick-questions">
+            <div class="qq" onclick="askQuick('How is my solar panel performing today?')">How is my panel performing?
+            </div>
+            <div class="qq" onclick="askQuick('When should I expect solar to kick in?')">When will solar kick in?</div>
+            <div class="qq" onclick="askQuick('How much money have I saved so far?')">How much have I saved?</div>
+            <div class="qq" onclick="askQuick('Is my voltage reading normal or is there an issue?')">Is voltage normal?
+            </div>
+            <div class="qq" onclick="askQuick('Give me tips to improve solar efficiency for my setup.')">Tips to
+              improve?</div>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-msg ai">
+              <div class="chat-avatar ai-av">AI</div>
+              <div class="chat-bubble">Hi! I'm your SolarSync AI powered by Mistral. Connect your Arduino and I'll
+                analyze your real-time solar data. Ask me anything about your setup!</div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Ask about your solar data..."
+              onkeydown="if(event.key==='Enter')sendChat()" />
+            <button class="send-btn" id="send-btn" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Energy Savings (Solar Hours × 12W LED × ₹8/kWh)</div>
+      <div class="savings-grid">
+        <div class="savings-card">
+          <div class="savings-period">Today</div>
+          <div class="savings-kwh" id="save-day">0.0000 <span>kWh</span></div>
+          <div class="savings-rupee" id="save-day-rs">₹ 0.00 saved</div>
+          <div class="savings-hours" id="save-day-hr">0 min on solar</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-period">This Month</div>
+          <div class="savings-kwh" id="save-month">0.0000 <span>kWh</span></div>
+          <div class="savings-rupee" id="save-month-rs">₹ 0.00 saved</div>
+          <div class="savings-hours" id="save-month-hr">0 hrs on solar</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-period">This Year</div>
+          <div class="savings-kwh" id="save-year">0.0000 <span>kWh</span></div>
+          <div class="savings-rupee" id="save-year-rs">₹ 0.00 saved</div>
+          <div class="savings-hours" id="save-year-hr">0 hrs on solar</div>
+        </div>
+      </div>
+
+      <div class="pred-card">
+        <div class="card-title" style="color:var(--ai)">AI Savings Forecast</div>
+        <div class="pred-grid">
+          <div class="pred-item">
+            <div class="pred-label">End of Day</div>
+            <div class="pred-val" id="pred-day">—</div>
+            <div class="pred-sub">projected kWh</div>
+          </div>
+          <div class="pred-item">
+            <div class="pred-label">End of Month</div>
+            <div class="pred-val" id="pred-month">—</div>
+            <div class="pred-sub">projected kWh</div>
+          </div>
+          <div class="pred-item">
+            <div class="pred-label">End of Year</div>
+            <div class="pred-val" id="pred-year">—</div>
+            <div class="pred-sub">projected kWh</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="log-card">
+        <div class="card-title">Switch Event Log</div>
+        <div class="log-list" id="log-list">
+          <div class="no-log">No switch events yet.</div>
+        </div>
+      </div>
+
+      <div class="serial-card">
+        <div class="card-title" style="color:var(--sun)">Raw Serial Output</div>
+        <div id="serial-raw">Waiting for connection...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script>
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  ★ PASTE YOUR MISTRAL API KEY HERE ★
+    const MISTRAL_API_KEY = '6RfrDo6jPA5hUzderkpx1Nne7Arjj1Mv';
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
+    const MISTRAL_MODEL = 'mistral-large-latest';
+
+    const RATE_PER_KWH = 8;
+    const LED_WATTS = 12;
+    const THRESHOLD = 9.0;
+    const ANOMALY_SPIKE = 3.0;
+    const AUTO_ANALYZE_EVERY = 30;
+
+    let port, reader, readLoopActive = false;
+    let currentSource = 'BATTERY';
+    let currentVoltage = 0;
+    let solarSeconds = 0, batterySeconds = 0;
+    let vMax = null, vMin = null, vSum = 0, vCount = 0;
+    let allVoltages = [];
+    let switchEvents = [];
+    let readingsSinceAnalysis = 0;
+    let aiAnalysisBusy = false;
+    let chatBusy = false;
+    let tick = 0;
+
+    // ── Persistence ────────────────────────────────────────
+    function loadSaved() {
+      const today = new Date().toDateString();
+      let saved = {};
+      try { saved = JSON.parse(localStorage.getItem('solarsync_ai') || '{}'); } catch (e) { }
+      if (saved.date !== today) { saved.date = today; saved.solarSecondsDay = 0; }
+      return saved;
+    }
+    function savePersist() {
+      const saved = loadSaved();
+      saved.solarSecondsDay = (saved.solarSecondsDay || 0) + solarSeconds;
+      saved.solarSecondsMonth = (saved.solarSecondsMonth || 0) + solarSeconds;
+      saved.solarSecondsYear = (saved.solarSecondsYear || 0) + solarSeconds;
+      solarSeconds = 0;
+      try { localStorage.setItem('solarsync_ai', JSON.stringify(saved)); } catch (e) { }
+    }
+
+    // ── Mistral API call ───────────────────────────────────
+    async function callMistral(prompt) {
+      const res = await fetch(MISTRAL_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + MISTRAL_API_KEY
+        },
+        body: JSON.stringify({
+          model: MISTRAL_MODEL,
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = data.message || (data.error && data.error.message) || data.detail || JSON.stringify(data);
+        throw new Error(res.status + ' ' + errorMsg);
+      }
+
+      if (data.error) throw new Error(data.error.message || 'Mistral API error');
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error('Invalid response structure: ' + JSON.stringify(data));
+      }
+      return data.choices[0].message.content;
+    }
+
+    // ── Charts ─────────────────────────────────────────────
+    Chart.defaults.color = '#5a6070';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+    const voltageChart = new Chart(document.getElementById('voltage-chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Solar V', data: [],
+          borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.08)',
+          borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true
+        }]
+      },
+      options: {
+        responsive: true, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { min: 0, max: 25, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { family: 'Space Mono', size: 10 }, callback: v => v + 'V' } }
+        }
+      }
+    });
+
+    const pieChart = new Chart(document.getElementById('pie-chart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Solar', 'Battery'],
+        datasets: [{ data: [0, 1], backgroundColor: ['rgba(245,166,35,0.8)', 'rgba(79,195,247,0.8)'], borderColor: ['#f5a623', '#4fc3f7'], borderWidth: 1 }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { family: 'Space Mono', size: 10 }, padding: 14, color: '#5a6070' } } },
+        cutout: '65%'
+      }
+    });
+
+    // ── Serial ─────────────────────────────────────────────
+    async function connectSerial() {
+      if (!('serial' in navigator)) {
+        alert('Web Serial not supported. Please use Chrome or Edge browser.');
+        return;
+      }
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: parseInt(document.getElementById('baud-select').value) });
+        setConnected(true);
+        readLoop();
+      } catch (e) {
+        setStatus('Connection failed: ' + e.message);
+      }
+    }
+
+    async function disconnectSerial() {
+      readLoopActive = false;
+      try { await reader?.cancel(); } catch (e) { }
+      try { await port?.close(); } catch (e) { }
+      setConnected(false);
+      savePersist();
+    }
+
+    function setConnected(v) {
+      document.getElementById('live-dot').className = 'live-dot' + (v ? '' : ' off');
+      document.getElementById('live-label').textContent = v ? 'LIVE' : 'DISCONNECTED';
+      document.getElementById('connect-btn').style.display = v ? 'none' : '';
+      document.getElementById('disconnect-btn').style.display = v ? '' : 'none';
+      setStatus(v ? 'Connected — receiving live data' : 'Disconnected');
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status-text').textContent = msg;
+    }
+
+    async function readLoop() {
+      readLoopActive = true;
+      const decoder = new TextDecoderStream();
+      port.readable.pipeTo(decoder.writable);
+      reader = decoder.readable.getReader();
+      let buf = '';
+      while (readLoopActive) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += value;
+          let lines = buf.split('\n');
+          buf = lines.pop();
+          for (const line of lines) {
+            const l = line.trim();
+            if (l) processLine(l);
+          }
+        } catch (e) { break; }
+      }
+    }
+
+    // ── Parse serial ───────────────────────────────────────
+    function processLine(line) {
+      const raw = document.getElementById('serial-raw');
+      raw.textContent += line + '\n';
+      const ls = raw.textContent.split('\n');
+      if (ls.length > 50) raw.textContent = ls.slice(-40).join('\n');
+      raw.scrollTop = raw.scrollHeight;
+
+      const m = line.match(/\[STATUS\] Solar:\s*([\d.]+)\s*V.*Source:\s*(\w+)/);
+      if (m) {
+        updateVoltage(parseFloat(m[1]));
+        updateSource(m[2]);
+      }
+      if (line.includes('SWITCHED TO SOLAR')) addLog('solar', currentVoltage);
+      if (line.includes('SWITCHED TO BATTERY')) addLog('battery', currentVoltage);
+    }
+
+    // ── Voltage update ─────────────────────────────────────
+    function updateVoltage(v) {
+      const prev = currentVoltage;
+      currentVoltage = v;
+      vCount++;
+      vSum += v;
+      if (vMax === null || v > vMax) vMax = v;
+      if (vMin === null || v < vMin) vMin = v;
+
+      const circ = 2 * Math.PI * 54;
+      document.getElementById('gauge-arc').setAttribute('stroke-dashoffset', circ * (1 - Math.min(v / 25, 1)));
+      document.getElementById('gauge-val').textContent = v.toFixed(2);
+      document.getElementById('v-current').textContent = v.toFixed(2) + ' V';
+      document.getElementById('v-max').textContent = vMax.toFixed(2) + ' V';
+      document.getElementById('v-min').textContent = vMin.toFixed(2) + ' V';
+      document.getElementById('v-avg').textContent = (vSum / vCount).toFixed(2) + ' V';
+      document.getElementById('v-count').textContent = vCount;
+
+      tick++;
+      voltageChart.data.labels.push(tick);
+      voltageChart.data.datasets[0].data.push(v);
+      if (voltageChart.data.labels.length > 60) {
+        voltageChart.data.labels.shift();
+        voltageChart.data.datasets[0].data.shift();
+      }
+      voltageChart.update('none');
+
+      // Anomaly detection
+      allVoltages.push(v);
+      if (allVoltages.length > 5) {
+        const delta = v - prev;
+        if (Math.abs(delta) > ANOMALY_SPIKE) {
+          showAnomaly(
+            'Sudden voltage ' + (delta > 0 ? 'spike' : 'drop') + ' detected: ' +
+            prev.toFixed(2) + 'V → ' + v.toFixed(2) + 'V (Δ' + delta.toFixed(2) + 'V). ' +
+            'Likely cause: ' + (delta > 0 ? 'torch/light applied to panel.' : 'panel shading or disconnection.')
+          );
+        }
+        if (vCount > 10) {
+          const avg = vSum / vCount;
+          if (v > avg * 2.5 && v > 5) {
+            showAnomaly(
+              'Voltage (' + v.toFixed(2) + 'V) is ' + (v / avg).toFixed(1) +
+              '× above session average (' + avg.toFixed(2) + 'V). Check sensor connections.'
+            );
+          }
+        }
+      }
+
+      readingsSinceAnalysis++;
+      if (readingsSinceAnalysis >= AUTO_ANALYZE_EVERY && !aiAnalysisBusy) {
+        readingsSinceAnalysis = 0;
+        runAIAnalysis();
+      }
+
+      updateSavings();
+    }
+
+    // ── Source update ──────────────────────────────────────
+    function updateSource(src) {
+      if (src !== currentSource) {
+        currentSource = src;
+        document.getElementById('solar-card').className = 'source-card' + (src === 'SOLAR' ? ' active-solar' : '');
+        document.getElementById('battery-card').className = 'source-card' + (src === 'BATTERY' ? ' active-battery' : '');
+      }
+      if (src === 'SOLAR') solarSeconds++; else batterySeconds++;
+      pieChart.data.datasets[0].data = [solarSeconds, batterySeconds];
+      pieChart.update('none');
+    }
+
+    // ── Savings ────────────────────────────────────────────
+    function updateSavings() {
+      const saved = loadSaved();
+      const ds = (saved.solarSecondsDay || 0) + solarSeconds;
+      const ms = (saved.solarSecondsMonth || 0) + solarSeconds;
+      const ys = (saved.solarSecondsYear || 0) + solarSeconds;
+
+      function kwh(s) { return (LED_WATTS * s / 3600) / 1000; }
+      function rs(k) { return (k * RATE_PER_KWH).toFixed(2); }
+      function ft(s) { return s < 3600 ? Math.floor(s / 60) + ' min' : (s / 3600).toFixed(1) + ' hrs'; }
+
+      const dk = kwh(ds), mk = kwh(ms), yk = kwh(ys);
+      document.getElementById('save-day').innerHTML = dk.toFixed(4) + ' <span>kWh</span>';
+      document.getElementById('save-day-rs').textContent = '₹ ' + rs(dk) + ' saved';
+      document.getElementById('save-day-hr').textContent = ft(ds) + ' on solar';
+      document.getElementById('save-month').innerHTML = mk.toFixed(4) + ' <span>kWh</span>';
+      document.getElementById('save-month-rs').textContent = '₹ ' + rs(mk) + ' saved';
+      document.getElementById('save-month-hr').textContent = ft(ms) + ' on solar';
+      document.getElementById('save-year').innerHTML = yk.toFixed(4) + ' <span>kWh</span>';
+      document.getElementById('save-year-rs').textContent = '₹ ' + rs(yk) + ' saved';
+      document.getElementById('save-year-hr').textContent = ft(ys) + ' on solar';
+
+      const now = new Date();
+      const secsElapsed = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      if (secsElapsed > 300 && ds > 0) {
+        const rate = ds / secsElapsed;
+        const predDay = kwh(rate * 86400);
+        document.getElementById('pred-day').textContent = predDay.toFixed(4);
+        document.getElementById('pred-month').textContent = (predDay * 30).toFixed(3);
+        document.getElementById('pred-year').textContent = (predDay * 365).toFixed(2);
+      }
+    }
+
+    // ── Log ────────────────────────────────────────────────
+    function addLog(type, volt) {
+      const list = document.getElementById('log-list');
+      const noLog = list.querySelector('.no-log');
+      if (noLog) noLog.remove();
+      const time = new Date().toLocaleTimeString('en-IN', { hour12: false });
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      item.innerHTML =
+        '<div class="log-dot ' + type + '"></div>' +
+        '<span class="log-time">' + time + '</span>' +
+        '<span class="log-msg">→ ' + type.toUpperCase() + '</span>' +
+        '<span class="log-volt">' + volt.toFixed(2) + 'V</span>';
+      list.insertBefore(item, list.firstChild);
+      if (list.children.length > 50) list.lastChild.remove();
+      switchEvents.push({ type, volt, time });
+    }
+
+    // ── Anomaly ────────────────────────────────────────────
+    function showAnomaly(msg) {
+      document.getElementById('anomaly-msg').textContent = msg;
+      document.getElementById('anomaly-bar').className = 'anomaly-bar show';
+      setTimeout(() => { document.getElementById('anomaly-bar').className = 'anomaly-bar'; }, 12000);
+    }
+
+    // ── Build context for AI ───────────────────────────────
+    function buildContext() {
+      const saved = loadSaved();
+      const ds = (saved.solarSecondsDay || 0) + solarSeconds;
+      const totalSec = solarSeconds + batterySeconds || 1;
+      return {
+        currentVoltage: currentVoltage.toFixed(2),
+        currentSource,
+        threshold: THRESHOLD,
+        sessionDuration: Math.round(totalSec / 60) + ' minutes',
+        solarPercent: Math.round(solarSeconds / totalSec * 100),
+        batteryPercent: Math.round(batterySeconds / totalSec * 100),
+        maxVoltage: vMax !== null ? vMax.toFixed(2) : 'N/A',
+        minVoltage: vMin !== null ? vMin.toFixed(2) : 'N/A',
+        avgVoltage: vCount > 0 ? (vSum / vCount).toFixed(2) : 'N/A',
+        totalReadings: vCount,
+        solarSecondsToday: Math.round(ds),
+        kwhToday: ((LED_WATTS * ds / 3600) / 1000).toFixed(5),
+        rupeesToday: ((LED_WATTS * ds / 3600) / 1000 * RATE_PER_KWH).toFixed(3),
+        switchCount: switchEvents.length,
+        recentSwitches: switchEvents.slice(-5),
+        ledWatts: LED_WATTS,
+        ratePerKwh: RATE_PER_KWH,
+        location: 'Mumbai, India'
+      };
+    }
+
+    // ── AI Analysis ────────────────────────────────────────
+    async function runAIAnalysis() {
+      if (aiAnalysisBusy) return;
+      aiAnalysisBusy = true;
+      const list = document.getElementById('insights-list');
+      list.innerHTML = '<div class="insight-item loading">Analyzing your solar data with Mistral AI...</div>';
+
+      const ctx = buildContext();
+      const prompt =
+        'You are an AI analyst for a solar/battery auto-switch system built on Arduino Nano in Mumbai, India.\n\n' +
+        'Current system data:\n' + JSON.stringify(ctx, null, 2) + '\n\n' +
+        'Hardware: Small solar panel → 25V voltage sensor → Arduino Nano → relay → 12W LED load.\n' +
+        'The system switches to solar when voltage > ' + THRESHOLD + 'V, battery otherwise.\n\n' +
+        'Provide exactly 4 insights in this JSON format (return ONLY the JSON array, no other text):\n' +
+        '[\n' +
+        '  {"tag":"info", "text":"insight text"},\n' +
+        '  {"tag":"warn", "text":"insight text"},\n' +
+        '  {"tag":"good", "text":"insight text"},\n' +
+        '  {"tag":"pred", "text":"insight text"}\n' +
+        ']\n\n' +
+        'Tags must be one of: info, warn, good, pred\n' +
+        '1. Performance assessment (how well solar is working)\n' +
+        '2. Pattern or anomaly observation\n' +
+        '3. Savings/efficiency tip\n' +
+        '4. Prediction or improvement recommendation\n' +
+        'Keep each to 1-2 sentences. Use the actual numbers from the data.';
+
+      try {
+        const text = await callMistral(prompt);
+        const clean = text.replace(/```json|```/g, '').trim();
+        const insights = JSON.parse(clean);
+        list.innerHTML = '';
+        insights.forEach(function (ins) {
+          const tag = ['info', 'warn', 'good', 'pred'].includes(ins.tag) ? ins.tag : 'info';
+          const el = document.createElement('div');
+          el.className = 'insight-item';
+          el.innerHTML = '<span class="insight-tag tag-' + tag + '">' + tag + '</span><span>' + ins.text + '</span>';
+          list.appendChild(el);
+        });
+      } catch (e) {
+        list.innerHTML = '<div class="insight-item loading">AI error: ' + e.message + '. Check your API key.</div>';
+      }
+      aiAnalysisBusy = false;
+    }
+
+    // ── Chat ───────────────────────────────────────────────
+    function askQuick(q) {
+      document.getElementById('chat-input').value = q;
+      sendChat();
+    }
+
+    async function sendChat() {
+      if (chatBusy) return;
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      input.value = '';
+      chatBusy = true;
+      document.getElementById('send-btn').disabled = true;
+
+      addChatMsg('user', msg);
+      const typing = addChatMsg('ai', 'Thinking...', true);
+
+      const ctx = buildContext();
+      const prompt =
+        'You are SolarSync AI, an expert assistant for an Arduino Nano solar/battery auto-switch project.\n\n' +
+        'Current live system data:\n' + JSON.stringify(ctx, null, 2) + '\n\n' +
+        'Hardware: small solar panel + 25V voltage sensor (A1) + active-LOW relay (A0) + 12W LED.\n' +
+        'Switches to solar when > ' + THRESHOLD + 'V. Location: Mumbai, India. Rate: ₹' + RATE_PER_KWH + '/kWh.\n\n' +
+        'User question: ' + msg + '\n\n' +
+        'Answer in 2-4 sentences. Be specific with the actual numbers. Be helpful and friendly.';
+
+      try {
+        const reply = await callMistral(prompt);
+        // Clean up AI markdown to look perfect in the chat bubble
+        const formattedReply = reply
+          .replace(/^### (.*$)/gim, '<strong>$1</strong>')
+          .replace(/^## (.*$)/gim, '<strong>$1</strong>')
+          .replace(/^# (.*$)/gim, '<strong>$1</strong>')
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/\n/g, '<br>');
+        typing.innerHTML = formattedReply;
+        typing.classList.remove('typing');
+      } catch (e) {
+        typing.textContent = 'Error: ' + e.message + '. Check your Mistral API key.';
+        typing.classList.remove('typing');
+      }
+      chatBusy = false;
+      document.getElementById('send-btn').disabled = false;
+    }
+
+    function addChatMsg(role, text, isTyping) {
+      const msgs = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'chat-msg ' + role;
+      const label = role === 'ai' ? 'AI' : 'YOU';
+      const avatarClass = role === 'ai' ? 'ai-av' : 'user-av';
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble' + (isTyping ? ' typing' : '');
+      bubble.textContent = text;
+      const avatar = document.createElement('div');
+      avatar.className = 'chat-avatar ' + avatarClass;
+      avatar.textContent = label;
+      div.appendChild(avatar);
+      div.appendChild(bubble);
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      return bubble;
+    }
+
+    // ── Clear ──────────────────────────────────────────────
+    function clearData() {
+      solarSeconds = 0; batterySeconds = 0;
+      vMax = null; vMin = null; vSum = 0; vCount = 0;
+      allVoltages = []; switchEvents = []; readingsSinceAnalysis = 0; tick = 0;
+      voltageChart.data.labels = [];
+      voltageChart.data.datasets[0].data = [];
+      voltageChart.update();
+      pieChart.data.datasets[0].data = [0, 1];
+      pieChart.update();
+      document.getElementById('log-list').innerHTML = '<div class="no-log">Log cleared.</div>';
+      document.getElementById('serial-raw').textContent = '';
+      document.getElementById('insights-list').innerHTML = '<div class="insight-item loading">Data cleared. Waiting for new readings...</div>';
+      ['v-current', 'v-max', 'v-min', 'v-avg'].forEach(function (id) { document.getElementById(id).textContent = '—'; });
+      document.getElementById('v-count').textContent = '0';
+      document.getElementById('gauge-val').textContent = '0.00';
+      ['pred-day', 'pred-month', 'pred-year'].forEach(function (id) { document.getElementById(id).textContent = '—'; });
+      try { localStorage.removeItem('solarsync_ai'); } catch (e) { }
+      updateSavings();
+    }
+
+    window.addEventListener('beforeunload', savePersist);
+    updateSavings();
+  </script>
+</body>
+
+</html>
