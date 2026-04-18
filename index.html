@@ -1213,7 +1213,7 @@
     // ── Mistral API call ───────────────────────────────────
     async function callMistral(prompt) {
       if (!MISTRAL_API_KEY) {
-        throw new Error('API Key missing. Ensure .env file is present and served by a local web server (like Live Server).');
+        throw new Error('Service unavailable (Missing credentials).');
       }
       const res = await fetch(MISTRAL_URL, {
         method: 'POST',
@@ -1234,7 +1234,7 @@
         throw new Error(res.status + ' ' + errorMsg);
       }
 
-      if (data.error) throw new Error(data.error.message || 'Mistral API error');
+      if (data.error) throw new Error('AI Service error');
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         throw new Error('Invalid response structure: ' + JSON.stringify(data));
       }
@@ -1547,7 +1547,7 @@
           list.appendChild(el);
         });
       } catch (e) {
-        list.innerHTML = '<div class="insight-item loading">AI error: ' + e.message + '. Check your API key.</div>';
+        list.innerHTML = '<div class="insight-item loading">AI service is currently unavailable. Please try again later.</div>';
       }
       aiAnalysisBusy = false;
     }
@@ -1603,7 +1603,7 @@
         typing.innerHTML = formattedReply;
         typing.classList.remove('typing');
       } catch (e) {
-        typing.textContent = 'Error: ' + e.message + '. Check your Mistral API key.';
+        typing.textContent = 'AI service is currently unavailable. Please try again later.';
         typing.classList.remove('typing');
       }
       chatBusy = false;
